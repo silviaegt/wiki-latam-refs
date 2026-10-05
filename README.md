@@ -73,7 +73,23 @@ By visualizing these patterns for Latin America specifically, this repository of
 
 ## How to Reproduce
 
-*To be added.*
+*To be completed.*
+
+### Scripts
+
+#### `classify_suffixes.R`
+
+Classifies the domain suffixes of the corpus according to their functional category (governmental, academic, commercial, etc.), see more in the Domain Suffix Classification of this ReadMe. The code combines three data
+sources:
+
+- **Public Suffix List** (via the R package `pslr`)
+- **GovEduDomains** (community catalog of government and education domains)
+- **Wikimedia Movement Insights** (canonical country and region metadata)
+
+**Input:** `data/long_domains.csv` (one row per unique domain).
+**Output:** `data/dominios_latam_clasificado.csv`.
+
+**Authorship:** The structure and documentation were reviewed with assistance from a language model (DeepSeek and ChatGPT). The methodological design and classification rules are original work by the author.
 
 ## References
 
