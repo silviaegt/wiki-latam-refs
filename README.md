@@ -36,7 +36,22 @@ The pipeline builds on the methodology developed in the *Untangling Wikipedia's 
 
 ### Domain Suffix Classification
 
-Domain suffixes are extracted using the R package [`pslr`](https://cran.r-project.org/package=pslr), which relies on the [Public Suffix List](https://publicsuffix.org/) to identify the effective public suffix of each URL (e.g., `com`, `com.mx`, `gov.br`). The resulting suffixes are then classified using a layered methodology designed to separate semantic domain types from geographic information. Government and educational namespaces are identified using the research-oriented [`GovEduDomains`](https://github.com/thu-jzl/GovEduDomains) dataset, which provides a manually curated catalog of government and education suffixes across countries and regions. Generic namespaces such as `com`, `org`, `net`, `mil`, and `news` are classified using a predefined semantic taxonomy. Compound country-code namespaces (e.g., `com.mx`, `org.ar`, `net.br`, `ac.cr`) are classified compositionally by combining the semantic meaning of the namespace with the country identified by its final country-code label. Country metadata—including ISO code, country name, UN subcontinent, and economic region—is derived from the [Wikimedia Movement Insights canonical country dataset](https://gitlab.wikimedia.org/repos/movement-insights/canonical-data/-/raw/main/country/countries.tsv). Country-specific exceptions and regional namespaces, such as Brazilian state government domains (`ac.gov.br`, `sp.gov.br`), are handled through explicit rules to avoid incorrectly interpreting regional codes as semantic labels. The classification distinguishes between categories explicitly documented in external catalogs and categories inferred from domain structure, while preserving the classification source for auditability and reproducibility.
+Domain suffixes are extracted using the R package [`pslr`](https://cran.r-project.org/package=pslr), which relies on the [Public Suffix List](https://publicsuffix.org/) to identify the effective public suffix of each URL (e.g., `com`, `com.mx`, `gov.br`). The resulting suffixes are then classified using a **layered methodology** designed to separate semantic domain types from geographic information.
+
+#### Classification Layers
+
+| Layer | Description | Source |
+| :--- | :--- | :--- |
+| **Government & Education** | Government and educational namespaces are identified using a manually curated catalog of government and education suffixes across countries and regions. | [`GovEduDomains`](https://github.com/thu-jzl/GovEduDomains) |
+| **Generic Namespaces** | Generic namespaces such as `com`, `org`, `net`, `mil`, and `news` are classified using a predefined semantic taxonomy. | Predefined semantic taxonomy |
+| **Compound Country-Code Namespaces** | Compound country-code namespaces (e.g., `com.mx`, `org.ar`, `net.br`, `ac.cr`) are classified compositionally by combining the semantic meaning of the namespace with the country identified by its final country-code label. | Compositional rule |
+| **Country Metadata** | Country metadata—including ISO code, country name, UN subcontinent, and economic region—is derived from the canonical country dataset. | [Wikimedia Movement Insights](https://gitlab.wikimedia.org/repos/movement-insights/canonical-data/-/raw/main/country/countries.tsv) |
+| **Regional Exceptions** | Country-specific exceptions and regional namespaces, such as Brazilian state government domains (`ac.gov.br`, `sp.gov.br`), are handled through explicit rules to avoid incorrectly interpreting regional codes as semantic labels. | Explicit rules |
+
+#### Key Principles
+
+- **Separation of concerns:** Semantic domain types are distinguished from geographic information.
+- **Auditability & reproducibility:** The classification distinguishes between categories explicitly documented in external catalogs and categories inferred from domain structure, while **preserving the classification source** for auditability and reproducibility.
 
 ## Relationship to *Untangling Wikipedia's Sources*
 
