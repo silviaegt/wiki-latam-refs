@@ -4,11 +4,7 @@
 
 # wiki-latam-refs
 
-Treemaps que visualizan las fuentes citadas en artículos de Wikipedia sobre América Latina.
-
-## Descripción general
-
-Este repositorio contiene el pipeline para obtener, enriquecer y visualizar las fuentes de referencia citadas en artículos de Wikipedia en español relacionados con América Latina. El objetivo es revelar qué dominios, publicaciones e instituciones dominan las fuentes de conocimiento sobre la región, y hacer visibles los patrones geográficos y lingüísticos ocultos en las citas de Wikipedia.
+Este repositorio contiene el pipeline para [obtener](#fuente-de-datos), [enriquecer](#proceso) y [visualizar](#visualizaciones) las fuentes de referencia citadas en artículos de Wikipedia en español relacionados con América Latina. El objetivo es revelar qué dominios, publicaciones e instituciones dominan las fuentes de conocimiento sobre la región, y hacer visibles los patrones geográficos y lingüísticos ocultos en las citas de Wikipedia.
 
 Este trabajo es parte del doctorado de **Silvia Gutiérrez**, bajo la supervisión del **Prof. Dr. Manuel Burghardt** en la Universidad de Leipzig. Para saber más sobre cómo se relaciona con mi proyecto general, ve a [Relación con *Untangling Wikipedia's Sources*](#relación-con-untangling-wikipedias-sources).
 
@@ -42,7 +38,7 @@ El conjunto de datos está disponible en figshare:
 
 El pipeline se basa en la metodología desarrollada en el proyecto de investigación *Untangling Wikipedia's Sources*:
 
-1. **Extracción de referencias** — Las referencias se extraen de los artículos de Wikipedia en español del conjunto de datos CCC, analizando tanto citas estructuradas de plantillas (p. ej., `cite web`, `cite news`) como referencias "de texto" no estructuradas.
+1. **Obtención de los artículos y extracción de referencias** — Los artículos se obtienen usando la API de Wikimedia y las referencias se extraen de los artículos de Wikipedia en español del conjunto de datos CCC, analizando tanto citas estructuradas de plantillas (p. ej., `cite web`, `cite news`) como referencias "de texto" no estructuradas.
 
 2. **Normalización y resolución de URL** — Las URL se normalizan a dominios base, los envoltorios de archivo se resuelven a las fuentes originales (p. ej., `web.archive.org/*/http://original.com`), y se gestionan las redirecciones para crear un mapeo limpio entre las referencias de Wikipedia y las fuentes reales citadas.
 
