@@ -1,3 +1,109 @@
+<div style="text-align: right;">
+  <a href="README.md">English</a> | <a href="README.es.md">Español</a>
+</div>
+
+# wiki-latam-refs
+
+Este repositorio contiene el pipeline para [obtener](#fuente-de-datos), [enriquecer](#clasificación-de-sufijos-de-dominio) y [visualizar](#visualizaciones) las fuentes de referencia citadas en artículos de la Wikipedia en español relacionados con América Latina. El objetivo es revelar qué dominios, publicaciones e instituciones dominan las fuentes de conocimiento sobre la región, y visibilizar los patrones geográficos y lingüísticos ocultos en las citas de Wikipedia.
+
+Este trabajo forma parte del doctorado de **Silvia Gutiérrez** bajo la supervisión del **Prof. Dr. Manuel Burghardt** en la Universidad de Leipzig. Para saber más sobre cómo se relaciona con mi proyecto general, ve a [Relación con *Untangling Wikipedia's Sources*](#relación-con-untangling-wikipedias-sources).
+
+## Índice
+
+- [Descripción general](#descripción-general)
+- [Fuente de datos](#fuente-de-datos)
+- [Proceso](#proceso)
+  - [Extracción de referencias](#extracción-de-referencias)
+  - [Enriquecimiento](#enriquecimiento)
+    - [Clasificación de sufijos de dominio](#clasificación-de-sufijos-de-dominio)
+      - [Capas de clasificación](#capas-de-clasificación)
+    - [Principios clave](#principios-clave)
+  - [Agregación y visualización](#agregación-y-visualización)
+- [Visualizaciones](#visualizaciones)
+  - [Dominios más citados](#dominios-más-citados)
+  - [Dominios más citados por tipo de entidad](#dominios-más-citados-por-tipo-de-entidad)
+  - [Páginas más citadas](#páginas-más-citadas)
+  - [Notas sobre las visualizaciones](#notas-sobre-las-visualizaciones)
+- [Relación con *Untangling Wikipedia's Sources*](#relación-con-untangling-wikipedias-sources)
+- [Hallazgos clave](#hallazgos-clave)
+- [Cómo reproducir](#cómo-reproducir)
+  - [Scripts](#scripts)
+    - [`classify_suffixes.R`](#classify_suffixesr)
+- [Referencias](#referencias)
+- [Licencia](#licencia)
+
+## Fuente de datos
+
+Los datos subyacentes provienen de los **Cultural Context Content (CCC) Datasets** publicados por Miquel-Ribé y Laniado (2019). En concreto, este proyecto utiliza el **dataset de la Wikipedia en español**, que identifica artículos con un fuerte contexto cultural para el mundo hispanohablante—incluyendo un gran número de temas latinoamericanos.
+
+El dataset está disponible en figshare:
+
+> Miquel-Ribé, Marc; Laniado, David (2019). Wikipedia Cultural Diversity Dataset. Figshare. Dataset. https://doi.org/10.6084/m9.figshare.7039514.v4
+
+## Proceso
+
+El pipeline se basa en la metodología desarrollada en el proyecto de investigación *Untangling Wikipedia's Sources*:
+
+1. [**Extracción de referencias**](#extracción-de-referencias) — Las referencias se extraen de los artículos de la Wikipedia en español del dataset CCC, analizando tanto citas estructuradas con plantillas (p. ej., `cite web`, `cite news`) como referencias "text" no estructuradas.
+
+2. **Normalización y resolución de URLs** — Las URLs se normalizan a dominios base, se resuelven los envoltorios de archivo a las fuentes originales (p. ej., `web.archive.org/*/http://original.com`), y se gestionan las redirecciones para crear un mapeo limpio entre las referencias de Wikipedia y las fuentes reales citadas.
+
+3. **Enriquecimiento de URLs** — Los dominios se enriquecerán con capas de metadatos que incluyen:
+   - **Clasificación de sufijos de dominio** — (ver [sección más abajo](#clasificación-de-sufijos-de-dominio)) ✅
+   - **Media Bias Fact Check (MBFC)** — sesgo político, rigor informativo, tipo de medio y país de origen ⏳
+   - **GDELT y Wikidata** — información sobre propiedad, financiación y transparencia ⏳
+   - **Geolocalización IP y WHOIS** — ubicación geográfica de las fuentes ⏳
+   - **OpenAlex y Crossref** — metadatos de citas académicas para URLs académicas ⏳
+
+4. **Agregación y visualización** — Los recuentos de referencias se agregan por `page_id` y `page_title`, y luego se filtran y ordenan para identificar las páginas más citadas. Los treemaps visualizan la distribución de referencias entre artículos y dominios.
+
+### Extracción de referencias
+
+La extracción se gestiona mediante dos módulos que trabajan juntos:
+
+- **`refdb.py`** — extrae datos estructurados de referencias de un único artículo de Wikipedia.
+- **`fetch_refs.py`** — orquesta la extracción en miles de artículos y escribe los resultados en disco.
+
+#### `refdb.py`
+
+Dada una página de Wikipedia (por título o ID de página), `refdb.py`:
+
+1. Obtiene el wikitexto del artículo a través de la API de Wikimedia (`action=query`, `prop=revisions`).
+2. Analiza el wikitexto con [`mwparserfromhell`](https://github.com/earwig/mwparserfromhell) y filtra las etiquetas `<ref>...</ref>`, omitiendo las auto-cerradas o vacías.
+3. Para cada referencia:
+   - Identifica la plantilla de cita principal (p. ej., `cita web`, `cita libro`, `cita noticia`).
+   - Captura plantillas anidadas, si las hay.
+   - Resuelve la URL, incluyendo cascadas de respaldo para nombres de parámetros y envoltorios de archivo (p. ej., `urlarchivo=`, `archiveurl=`, o URLs de instantáneas de `web.archive.org`).
+   - Extrae todos los parámetros no vacíos de la plantilla.
+
+La salida es un DataFrame ordenado con **una fila por referencia** y las siguientes columnas base:
+
+| Columna | Descripción |
+| :--- | :--- |
+| `page_id` | ID de la página de Wikipedia |
+| `page_title` | Título del artículo |
+| `ref_index` | Posición ordinal de la referencia dentro del artículo |
+| `template` | Nombre de la plantilla de cita principal (minúsculas) |
+| `nested_templates` | Lista de plantillas anidadas separadas por pipes, si las hay |
+| `url` | URL resuelta (original, no instantánea) |
+| `url_archivo` | URL archivada, si existe |
+| `raw_string` | Wikitexto crudo de la referencia |
+| `text` | Representación en texto plano de la referencia |
+
+Cualquier parámetro adicional de la plantilla (p. ej., `título`, `fecha`, `autor`, `editorial`) se convierte en columnas adicionales. Debido a que las plantillas son heterogéneas, el DataFrame es **ancho y disperso**: una fila de `{{cita web}}` tendrá `editorial` vacía, mientras que una fila de `{{cita libro}}` tendrá `url` vacía.
+
+#### `fetch_refs.py`
+
+`fetch_refs.py` orquesta la extracción en todo el corpus:
+
+1. Lee un CSV (`latam.csv`) con una fila por artículo (`page_id`, `iso3166`).
+2. Agrupa los artículos por país.
+3. Para cada artículo, llama a `refdb.extract()` y acumula los resultados en un búfer en memoria.
+4. Cuando el búfer supera las 2.000 filas, concatena y escribe un fragmento parquet en `refs/<ISO>/part-NNNNN.parquet`.
+5. Mantiene un **registro de reanudación** (`fetch_state.csv`) con el estado de cada par (página, país), para que el proceso pueda reanudarse si se interrumpe.
+6. Escribe registros de fallos por país en `failures/<ISO>.csv`.
+7. Imprime un resumen de filas por país al final.
+
 
 #### Decisiones de diseño
 
