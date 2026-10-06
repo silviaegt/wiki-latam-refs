@@ -13,7 +13,12 @@ This work is part of **Silvia Gutiérrez'** PhD under the supervision of **Prof.
 - [Overview](#overview)
 - [Data Source](#data-source)
 - [Process](#process)
-  - [Domain Suffix Classification](#domain-suffix-classification)
+  - [Reference Extraction](#reference-extraction)
+  - [Enrichment](#enrichment)
+    - [Domain Suffix Classification](#domain-suffix-classification)
+      - [Classification Layers](#classification-layers)
+    - [Key Principles](#key-principles)
+  - [Aggregation and Visualization](#aggregation-and-visualization)
 - [Visualizations](#visualizations)
   - [Top domains](#top-domains)
   - [Top domains by entity type](#top-domains-by-entity-type)
@@ -23,8 +28,10 @@ This work is part of **Silvia Gutiérrez'** PhD under the supervision of **Prof.
 - [Key Findings](#key-findings)
 - [How to Reproduce](#how-to-reproduce)
   - [Scripts](#scripts)
+    - [`classify_suffixes.R`](#classify_suffixesr)
 - [References](#references)
 - [License](#license)
+
 
 ## Data Source
 
