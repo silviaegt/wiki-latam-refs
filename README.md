@@ -1,12 +1,30 @@
+<div style="text-align: right;">
+  <a href="README.md">English</a> | <a href="README.es.md">Español</a>
+</div>
+
 # wiki-latam-refs
 
-Treemaps visualizing the sources cited in Wikipedia articles about Latin America.
+This repository contains the pipeline to [obtain](#data-source), [enrich](#domain-suffix-classification), and [visualize](#visualizations) the reference sources cited in Spanish Wikipedia articles related to Latin America. The goal is to reveal which domains, publications, and institutions dominate the sourcing of knowledge about the region, and to make visible the geographic and linguistic patterns hidden in Wikipedia's citations.
 
-## Overview
+This work is part of **Silvia Gutiérrez'** PhD under the supervision of **Prof. Dr. Manuel Burghardt** at the University of Leipzig. To learn more about how it relates to my overall project, go to [Relationship to *Untangling Wikipedia's Sources*](#relationship-to-untangling-wikipedias-sources).
 
-This repository contains treemap visualizations that map the reference sources cited in Wikipedia articles related to Latin America. The goal is to reveal which domains, publications, and institutions dominate the sourcing of knowledge about the region, and to make visible the geographic and linguistic patterns hidden in Wikipedia's citations.
+## Table of Contents
 
-This work is a supervised project by **Silvia Gutiérrez**, under the supervision of **Prof. Dr. Manuel Burghardt** at the University of Leipzig.
+- [Overview](#overview)
+- [Data Source](#data-source)
+- [Process](#process)
+  - [Domain Suffix Classification](#domain-suffix-classification)
+- [Visualizations](#visualizations)
+  - [Top domains](#top-domains)
+  - [Top domains by entity type](#top-domains-by-entity-type)
+  - [Top pages](#top-pages)
+  - [Notes on the visualizations](#notes-on-the-visualizations)
+- [Relationship to *Untangling Wikipedia's Sources*](#relationship-to-untangling-wikipedias-sources)
+- [Key Findings](#key-findings)
+- [How to Reproduce](#how-to-reproduce)
+  - [Scripts](#scripts)
+- [References](#references)
+- [License](#license)
 
 ## Data Source
 
@@ -25,14 +43,13 @@ The pipeline builds on the methodology developed in the *Untangling Wikipedia's 
 2. **URL Normalization & Resolution** — URLs are normalized to base domains, archive wrappers are resolved to original sources (e.g., `web.archive.org/*/http://original.com`), and redirects are handled to create a clean mapping between Wikipedia references and the actual sources being cited.
 
 3. **URL Enrichment** — Domains will be enriched with metadata layers including:
-   - **Domain Suffix Classification** — (see section below) :white_check_mark:
+   - **Domain Suffix Classification** — (see [section below](#domain-suffix-classification)) :white_check_mark:
    - **Media Bias Fact Check (MBFC)** — political bias, factual reporting, media type, and country of origin :hourglass:
    - **GDELT & Wikidata** — ownership, funding, and transparency information :hourglass:
    - **IP geolocation & WHOIS** — geographic location of sources :hourglass:
    - **OpenAlex & Crossref** — scholarly citation metadata for academic URLs :hourglass:
 
 4. **Aggregation & Visualization** — Reference counts are aggregated by `page_id` and `page_title`, then filtered and sorted to identify the top cited pages. The treemaps visualize the distribution of references across articles and domains.
-
 
 ### Domain Suffix Classification
 
@@ -144,8 +161,7 @@ By visualizing these patterns for Latin America specifically, this repository of
 
 #### `classify_suffixes.R`
 
-Classifies the domain suffixes of the corpus according to their functional category (governmental, academic, commercial, etc.), see more in the Domain Suffix Classification of this ReadMe. The code combines three data
-sources:
+Classifies the domain suffixes of the corpus according to their functional category (governmental, academic, commercial, etc.), see more in the [Domain Suffix Classification](#domain-suffix-classification) section of this README. The code combines three data sources:
 
 - **Public Suffix List** (via the R package `pslr`)
 - **GovEduDomains** (community catalog of government and education domains)
