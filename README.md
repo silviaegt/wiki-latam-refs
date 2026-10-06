@@ -38,7 +38,7 @@ The dataset is available on figshare:
 
 The pipeline builds on the methodology developed in the *Untangling Wikipedia's Sources* research project:
 
-1. **Reference Extraction** — References are extracted from the Spanish Wikipedia articles in the CCC dataset, parsing both structured template citations (e.g., `cite web`, `cite news`) and unstructured "text" references.
+1. [**Reference Extraction**](#reference-extraction) — References are extracted from the Spanish Wikipedia articles in the CCC dataset, parsing both structured template citations (e.g., `cite web`, `cite news`) and unstructured "text" references.
 
 2. **URL Normalization & Resolution** — URLs are normalized to base domains, archive wrappers are resolved to original sources (e.g., `web.archive.org/*/http://original.com`), and redirects are handled to create a clean mapping between Wikipedia references and the actual sources being cited.
 
@@ -51,11 +51,102 @@ The pipeline builds on the methodology developed in the *Untangling Wikipedia's 
 
 4. **Aggregation & Visualization** — Reference counts are aggregated by `page_id` and `page_title`, then filtered and sorted to identify the top cited pages. The treemaps visualize the distribution of references across articles and domains.
 
-### Domain Suffix Classification
+
+### Reference extraction
+
+Extraction is handled by two modules that work together:
+
+- **`refdb.py`** — extracts structured reference data from a single Wikipedia article.
+- **`fetch_refs.py`** — orchestrates the extraction across thousands of articles and writes the results to disk.
+
+#### `refdb.py`
+
+Given a Wikipedia page (by title or page ID), `refdb.py`:
+
+1. Fetches the article's wikitext via the Wikimedia API (`action=query`, `prop=revisions`).
+2. Parses the wikitext with [`mwparserfromhell`](https://github.com/earwig/mwparserfromhell) and filters `<ref>...</ref>` tags, skipping self-closing or empty ones.
+3. For each reference:
+   - Identifies the main citation template (e.g. `cita web`, `cita libro`, `cita noticia`).
+   - Captures nested templates, if any.
+   - Resolves the URL, including fallback cascades for parameter names and archive wrappers (e.g. `urlarchivo=`, `archiveurl=`, or snapshot URLs from `web.archive.org`).
+   - Extracts every non-empty template parameter.
+
+The output is a tidy DataFrame with **one row per reference** and the following base columns:
+
+| Column | Description |
+| :--- | :--- |
+| `page_id` | Wikipedia page ID |
+| `page_title` | Article title |
+| `ref_index` | Ordinal position of the reference within the article |
+| `template` | Main citation template name (lowercase) |
+| `nested_templates` | Pipe-separated list of nested templates, if any |
+| `url` | Resolved URL (original, not snapshot) |
+| `url_archivo` | Archived URL, if present |
+| `raw_string` | Raw wikitext of the reference |
+| `text` | Plain-text rendering of the reference |
+
+Any additional template parameters (e.g. `título`, `fecha`, `autor`, `editorial`) become additional columns. Because templates are heterogeneous, the DataFrame is **wide and sparse**: a row from `{{cita web}}` will have `editorial` empty, while a row from `{{cita libro}}` will have `url` empty.
+
+#### `fetch_refs.py`
+
+`fetch_refs.py` orchestrates extraction across the full corpus:
+
+1. Reads a CSV (`latam.csv`) with one row per article (`page_id`, `iso3166`).
+2. Groups articles by country.
+3. For each article, calls `refdb.extract()` and accumulates results in an in-memory buffer.
+4. When the buffer exceeds 2,000 rows, concatenates and writes a parquet chunk to `refs/<ISO>/part-NNNNN.parquet`.
+5. Maintains a **resume ledger** (`fetch_state.csv`) with the status of every (page, country) pair, so the process can be resumed if interrupted.
+6. Writes per-country failure logs to `failures/<ISO>.csv`.
+7. Prints a summary of rows per country at the end.
+
+Output layout:
+
+```
+refs/
+├── AR/
+│   ├── part-00001.parquet
+│   ├── part-00002.parquet
+│   └── ...
+├── BR/
+│   └── ...
+├── MX/
+│   └── ...
+failures/
+├── AR.csv
+└── ...
+fetch_state.csv
+```
+
+#### Design decisions
+
+| Decision | Rationale |
+| :--- | :--- |
+| **One row per reference** | Preserves the fine-grained structure needed for template and archive analysis. |
+| **Wide and sparse tables** | Templates are heterogeneous; a fixed schema would force information loss. |
+| **Parquet chunks of ~2,000 rows** | Balances memory usage and I/O overhead on a laptop. |
+| **Resume ledger** | The pipeline runs for hours; interruption should not require restarting. |
+| **No API rate limit bypass** | `SLEEP = 0.1` between requests respects Wikimedia's terms of service. |
+
+#### Known limitations
+
+- **One API call per page.** The Wikimedia API allows batching up to 50 titles per request. Migrating to batch requests would reduce runtime by roughly 30×, but requires refactoring `fetch_page()` to handle multi-page responses and split the results per page.
+- **Wide parquet files.** Because every template parameter becomes a column, the parquet files are wider than necessary. An alternative would be to serialize non-base parameters as a JSON column, at the cost of parsing on read.
+- **Python string storage workaround.** The pipeline disables pyarrow-backed strings (`pd.set_option("mode.string_storage", "python")`) to avoid a schema-inference failure when writing heterogeneous DataFrames to parquet. This is an environment-specific workaround, not a design choice.
+
+### Enrichment
+
+Once the reference parquets exist, the pipeline enriches them with external metadata:
+
+1. **Domain normalization** — URLs are normalized to registered domains, and archive wrappers are resolved to original sources.
+2. **Domain suffix classification** — Suffixes are extracted with [`pslr`](https://cran.r-project.org/package=pslr) (Public Suffix List) and classified using the layered methodology described in the **Domain Suffix Classification** section above.
+3. **Wikidata enrichment** — Each article's Wikidata QID is retrieved, along with its `instance of` (P31) and `subclass of` (P279) properties. This produces the `instance_of_parent_label` used in the by-entity-type visualizations.
+4. **Country and region mapping** — Country metadata (ISO code, UN subcontinent, economic region) is joined from the [Wikimedia Movement Insights](https://gitlab.wikimedia.org/repos/movement-insights/canonical-data) canonical country table.
+
+#### Domain Suffix Classification
 
 Domain suffixes are extracted using the R package [`pslr`](https://cran.r-project.org/package=pslr), which relies on the [Public Suffix List](https://publicsuffix.org/) to identify the effective public suffix of each URL (e.g., `com`, `com.mx`, `gov.br`). The resulting suffixes are then classified using a **layered methodology** designed to separate semantic domain types from geographic information.
 
-#### Classification Layers
+##### Classification Layers
 
 | Layer | Description | Source |
 | :--- | :--- | :--- |
@@ -70,13 +161,15 @@ Domain suffixes are extracted using the R package [`pslr`](https://cran.r-projec
 - **Separation of concerns:** Semantic domain types are distinguished from geographic information.
 - **Auditability & reproducibility:** The classification distinguishes between categories explicitly documented in external catalogs and categories inferred from domain structure, while **preserving the classification source** for auditability and reproducibility.
 
-## Visualizations
+### Aggregation and visualization
 
-The treemaps are published as interactive HTML files via GitHub Pages. Each country has three views:
+Enriched references are aggregated at the (country, domain, entity type) level to produce:
 
-- **Top domains** — most-cited domains in articles about the country, aggregated by number of distinct pages.
-- **Top domains by entity type** — same, but broken down by the type of entity the article describes (municipality, football club, diocese, etc.), using Wikidata's `instance of` hierarchy.
-- **Top pages** — Wikipedia articles with the highest number of references.
+- **Top domains** — Most-cited domains per country, weighted by distinct pages.
+- **Top domains by entity type** — Same, broken down by the Wikidata `instance of` hierarchy.
+- **Top pages** — Articles with the highest number of references.
+
+These aggregations feed the treemaps published in the `dataviz/` folder.
 
 ### Top domains
 
