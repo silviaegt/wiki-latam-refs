@@ -32,7 +32,7 @@ The underlying data comes from the **Cultural Context Content (CCC) Datasets** p
 
 The dataset is available on figshare:
 
-> Miquel-Ribé, Marc; Laniado, David (2019). Wikipedia Cultural Diversity Dataset. figshare. Dataset. https://doi.org/10.6084/m9.figshare.7039514.v4
+> Miquel-Ribé, Marc; Laniado, David (2019). Wikipedia Cultural Diversity Dataset. Figshare. Dataset. https://doi.org/10.6084/m9.figshare.7039514.v4
 
 ## Process
 
@@ -43,11 +43,11 @@ The pipeline builds on the methodology developed in the *Untangling Wikipedia's 
 2. **URL Normalization & Resolution** — URLs are normalized to base domains, archive wrappers are resolved to original sources (e.g., `web.archive.org/*/http://original.com`), and redirects are handled to create a clean mapping between Wikipedia references and the actual sources being cited.
 
 3. **URL Enrichment** — Domains will be enriched with metadata layers including:
-   - **Domain Suffix Classification** — (see [section below](#domain-suffix-classification)) :white_check_mark:
-   - **Media Bias Fact Check (MBFC)** — political bias, factual reporting, media type, and country of origin :hourglass:
-   - **GDELT & Wikidata** — ownership, funding, and transparency information :hourglass:
-   - **IP geolocation & WHOIS** — geographic location of sources :hourglass:
-   - **OpenAlex & Crossref** — scholarly citation metadata for academic URLs :hourglass:
+   - **Domain Suffix Classification** — (see [section below](#domain-suffix-classification)) ✅
+   - **Media Bias Fact Check (MBFC)** — political bias, factual reporting, media type, and country of origin ⏳
+   - **GDELT & Wikidata** — ownership, funding, and transparency information ⏳
+   - **IP geolocation & WHOIS** — geographic location of sources ⏳
+   - **OpenAlex & Crossref** — scholarly citation metadata for academic URLs ⏳
 
 4. **Aggregation & Visualization** — Reference counts are aggregated by `page_id` and `page_title`, then filtered and sorted to identify the top cited pages. The treemaps visualize the distribution of references across articles and domains.
 
